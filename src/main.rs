@@ -60,32 +60,15 @@ impl CmRDT for Controller {
     type Validation = CrdtError;
 
     fn apply(&mut self, op: Self::Op) {
-        match op.op {
-            OpOneByOne::T(o) => {
-                if self.clock.get(&op.dot.actor) >= op.dot.counter {
-                    return;
-                }
-                self.txns.apply(o);
-
-                self.clock.apply(op.dot);
-            }
-            OpOneByOne::H(o) => {
-                if self.clock.get(&op.dot.actor) >= op.dot.counter {
-                    return;
-                }
-                self.history_hashes.apply(o);
-
-                self.clock.apply(op.dot);
-            }
-            OpOneByOne::C(o) => {
-                if self.clock.get(&op.dot.actor) >= op.dot.counter {
-                    return;
-                }
-                self.candidates.apply(o);
-
-                self.clock.apply(op.dot);
-            }
+        if self.clock.get(&op.dot.actor) >= op.dot.counter {
+            return;
         }
+        match op.op {
+            OpOneByOne::T(o) => self.txns.apply(o),
+            OpOneByOne::H(o) => self.history_hashes.apply(o),
+            OpOneByOne::C(o) => self.candidates.apply(o),
+        }
+        self.clock.apply(op.dot);
     }
 
     fn validate_op(&self, op: &Self::Op) -> Result<(), Self::Validation> {
