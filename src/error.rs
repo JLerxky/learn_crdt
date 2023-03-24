@@ -5,6 +5,8 @@ use thiserror::Error;
 pub enum CrdtError {
     #[error("unknown error")]
     Unknown,
+    #[error("none op")]
+    NoneOp,
     #[error("VClock error")]
     VClock(<VClock<u64> as CmRDT>::Validation),
     #[error("Map error")]

@@ -1,20 +1,18 @@
-mod error;
-
 use core::fmt::Debug;
 
+use crate::{error::CrdtError, OpAllInOne};
 use crdts::{CmRDT, CvRDT, Dot, Map, Orswot, VClock};
-use error::CrdtError;
 use serde::{Deserialize, Serialize};
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Controller {
+pub struct ControllerAllInOne {
     clock: VClock<u64>,
     txns: Orswot<String, u64>,
     history_hashes: Map<u64, Orswot<Vec<u8>, u64>, u64>,
     candidates: Orswot<Vec<u8>, u64>,
 }
 
-impl Controller {
+impl ControllerAllInOne {
     pub fn new() -> Self {
         Self {
             clock: Default::default(),
@@ -27,35 +25,10 @@ impl Controller {
 
 pub struct Op {
     dot: Dot<u64>,
-    op: OpOneByOne,
+    op: OpAllInOne,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum OpOneByOne {
-    T(crdts::orswot::Op<String, u64>),
-    H(crdts::map::Op<u64, Orswot<Vec<u8>, u64>, u64>),
-    C(crdts::orswot::Op<Vec<u8>, u64>),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum OpAllInOne {
-    All(
-        Option<crdts::orswot::Op<String, u64>>,
-        Option<crdts::map::Op<u64, Orswot<Vec<u8>, u64>, u64>>,
-        Option<crdts::orswot::Op<Vec<u8>, u64>>,
-    ),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum OpMix {
-    TaHuCa,
-    TrHuCa,
-    TaHrCa,
-    TaHuCr,
-    // ...
-}
-
-impl CmRDT for Controller {
+impl CmRDT for ControllerAllInOne {
     type Op = Op;
     type Validation = CrdtError;
 
@@ -64,9 +37,18 @@ impl CmRDT for Controller {
             return;
         }
         match op.op {
-            OpOneByOne::T(o) => self.txns.apply(o),
-            OpOneByOne::H(o) => self.history_hashes.apply(o),
-            OpOneByOne::C(o) => self.candidates.apply(o),
+            (None, None, None) => return,
+            (t_op, h_op, c_op) => {
+                if let Some(t_op) = t_op {
+                    self.txns.apply(t_op);
+                }
+                if let Some(h_op) = h_op {
+                    self.history_hashes.apply(h_op);
+                }
+                if let Some(c_op) = c_op {
+                    self.candidates.apply(c_op);
+                }
+            }
         }
         self.clock.apply(op.dot);
     }
@@ -74,14 +56,27 @@ impl CmRDT for Controller {
     fn validate_op(&self, op: &Self::Op) -> Result<(), Self::Validation> {
         self.clock.validate_op(&op.dot).map_err(CrdtError::VClock)?;
         match &op.op {
-            OpOneByOne::T(o) => self.txns.validate_op(o).map_err(CrdtError::VClock),
-            OpOneByOne::H(op) => self.history_hashes.validate_op(op).map_err(CrdtError::Map),
-            OpOneByOne::C(op) => self.candidates.validate_op(op).map_err(CrdtError::VClock),
+            (None, None, None) => return Err(CrdtError::NoneOp),
+            (t_op, h_op, c_op) => {
+                if let Some(t_op) = t_op {
+                    return self.txns.validate_op(t_op).map_err(CrdtError::VClock);
+                }
+                if let Some(h_op) = h_op {
+                    return self
+                        .history_hashes
+                        .validate_op(h_op)
+                        .map_err(CrdtError::Map);
+                }
+                if let Some(c_op) = c_op {
+                    return self.candidates.validate_op(c_op).map_err(CrdtError::VClock);
+                }
+            }
         }
+        Err(CrdtError::NoneOp)
     }
 }
 
-impl CvRDT for Controller {
+impl CvRDT for ControllerAllInOne {
     type Validation = CrdtError;
 
     fn validate_merge(&self, _other: &Self) -> Result<(), Self::Validation> {
@@ -93,37 +88,30 @@ impl CvRDT for Controller {
     }
 }
 
-fn main() {}
-
 #[test]
 fn test() {
-    let mut controller = Controller::new();
+    let mut controller = ControllerAllInOne::new();
+
     let op1 = controller.txns.add(
         "member".to_owned(),
         controller.txns.read().derive_add_ctx(9_742_820),
     );
-    controller.apply(Op {
-        dot: Dot::new(9_742_820, 2),
-        op: OpOneByOne::T(op1),
-    });
-    let op2 = controller.candidates.add(
-        vec![8; 20],
-        controller.txns.read().derive_add_ctx(9_742_820),
-    );
-    controller.apply(Op {
-        dot: Dot::new(9_742_820, 3),
-        op: OpOneByOne::C(op2),
-    });
+
     let add_ctx = controller
         .history_hashes
         .read_ctx()
         .derive_add_ctx(9_742_820);
-    let op3 = controller
+    let op2 = controller
         .history_hashes
         .update(10u64, add_ctx, |v, a| v.add(vec![8; 20], a));
+
+    let op3 = controller.candidates.add(
+        vec![8; 20],
+        controller.txns.read().derive_add_ctx(9_742_820),
+    );
     controller.apply(Op {
         dot: Dot::new(9_742_820, 4),
-        op: OpOneByOne::H(op3),
+        op: (Some(op1), Some(op2), Some(op3)),
     });
     println!("{:#?}", controller);
 }
