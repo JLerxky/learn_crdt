@@ -89,30 +89,11 @@ impl CmRDT for Controller {
     }
 
     fn validate_op(&self, op: &Self::Op) -> Result<(), Self::Validation> {
+        self.clock.validate_op(&op.dot).map_err(CrdtError::VClock)?;
         match &op.op {
-            OpOneByOne::T(op) => match &op {
-                crdts::orswot::Op::Add { dot, .. } => {
-                    self.clock.validate_op(dot).map_err(CrdtError::VClock)?;
-                    self.txns.validate_op(op).map_err(CrdtError::VClock)
-                }
-                crdts::orswot::Op::Rm { .. } => Ok(()),
-            },
-            OpOneByOne::H(op) => {
-                match &op {
-                    crdts::map::Op::Rm { .. } => {}
-                    crdts::map::Op::Up { dot, .. } => {
-                        self.clock.validate_op(dot).map_err(CrdtError::VClock)?;
-                    }
-                }
-                self.history_hashes.validate_op(op).map_err(CrdtError::Map)
-            }
-            OpOneByOne::C(op) => match &op {
-                crdts::orswot::Op::Add { dot, .. } => {
-                    self.clock.validate_op(dot).map_err(CrdtError::VClock)?;
-                    self.candidates.validate_op(op).map_err(CrdtError::VClock)
-                }
-                crdts::orswot::Op::Rm { .. } => Ok(()),
-            },
+            OpOneByOne::T(o) => self.txns.validate_op(o).map_err(CrdtError::VClock),
+            OpOneByOne::H(op) => self.history_hashes.validate_op(op).map_err(CrdtError::Map),
+            OpOneByOne::C(op) => self.candidates.validate_op(op).map_err(CrdtError::VClock),
         }
     }
 }
