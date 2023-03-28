@@ -1,13 +1,13 @@
-use crdts::{CmRDT, Map, Orswot};
-use crdts_derive::{crdt, CmRDT};
-use serde::{Deserialize, Serialize};
+use crdts::{CmRDT, GCounter, Map, Orswot};
+use crdts_derive::{crdt, CRDT};
 
 #[crdt]
-#[derive(CmRDT, Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default, Debug)]
 pub struct ControllerOne {
     txns: Orswot<String, u64>,
     history_hashes: Map<u64, Orswot<Vec<u8>, u64>, u64>,
     candidates: Orswot<Vec<u8>, u64>,
+    block_height: GCounter<u64>,
 }
 
 #[test]
@@ -34,6 +34,7 @@ fn test() {
         txns_op: Some(op1),
         history_hashes_op: Some(op2),
         candidates_op: Some(op3),
+        block_height_op: None,
     });
     println!("{:#?}", controller);
 
@@ -58,6 +59,7 @@ fn test() {
         txns_op: Some(op1),
         history_hashes_op: Some(op2),
         candidates_op: Some(op3),
+        block_height_op: None,
     });
     println!("{:#?}", controller);
 }

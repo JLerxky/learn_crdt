@@ -1,10 +1,9 @@
 use core::fmt::Debug;
 
 use crdts::{CmRDT, CvRDT, Dot, Map, Orswot, VClock};
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct Controller {
     v_clock: VClock<u64>,
     txns: Orswot<String, u64>,
