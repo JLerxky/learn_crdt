@@ -1,5 +1,5 @@
 use crdts::{CmRDT, GCounter, Map, Orswot};
-use crdts_derive::{crdt, CRDT};
+use crdts_derive::crdt;
 
 #[crdt(u64)]
 #[derive(Default, Debug)]
@@ -13,8 +13,8 @@ pub struct ControllerOne {
 #[test]
 fn test() {
     let mut controller = ControllerOne::default();
-    for actor in 0..10 {
-        for counter in 0..3 {
+    for actor in 1..=100 {
+        for counter in 1..=3 {
             let dot = crdts::Dot::new(actor, counter);
             let op1 = controller.txns.add(
                 format!("{actor}-{counter}"),
@@ -39,7 +39,8 @@ fn test() {
                 candidates_op: Some(op3),
                 block_height_op: Some(op4),
             });
-            println!("{:#?}", controller);
         }
     }
+    println!("txns num: {:#?}", controller.txns.read().val.len());
+    println!("block_height: {:#?}", controller.block_height.read());
 }
