@@ -6,6 +6,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-crdts = { git = "https://github.com/JLerxky/rust-crdt", branch = "proc_macro" }
-crdts_derive = { git = "https://github.com/JLerxky/rust-crdt", branch = "proc_macro" }
-thiserror = "1.0"
+crdts = "7.3"
+crdts_derive = "7.3"
