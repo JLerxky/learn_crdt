@@ -1,7 +1,6 @@
 use core::fmt::Debug;
 
 use crdts::{CmRDT, CvRDT, Dot, Map, Orswot, VClock};
-use thiserror::Error;
 
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct Controller {
@@ -11,19 +10,22 @@ pub struct Controller {
     candidates: Orswot<Vec<u8>, u64>,
 }
 
-#[derive(Error, Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum ControllerError {
-    #[error("none op")]
     NoneOp,
-    #[error("VClock error")]
     VClock(<VClock<u64> as CmRDT>::Validation),
-    #[error("Txns error")]
     Txns(<Orswot<String, u64> as CmRDT>::Validation),
-    #[error("HistoryHashes error")]
     HistoryHashes(<Map<u64, Orswot<Vec<u8>, u64>, u64> as CmRDT>::Validation),
-    #[error("Candidates error")]
     Candidates(<Orswot<Vec<u8>, u64> as CmRDT>::Validation),
 }
+
+impl std::fmt::Display for ControllerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Debug::fmt(&self, f)
+    }
+}
+
+impl std::error::Error for ControllerError {}
 
 #[allow(clippy::type_complexity)]
 pub struct Op {
