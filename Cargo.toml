@@ -7,4 +7,4 @@ edition = "2021"
 
 [dependencies]
 crdts = "7.3"
-crdts_derive = "7.3"
+crdts_macro = "7.3"

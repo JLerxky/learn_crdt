@@ -1,8 +1,7 @@
 use crdts::{GCounter, Map, Orswot};
-use crdts_derive::crdt;
+use crdts_macro::crdt;
 
 #[crdt(u64)]
-#[derive(Default, Debug, Clone)]
 pub struct ControllerOne {
     txns: Orswot<String, String>,
     history_hashes: Map<u64, Orswot<Vec<u8>, u64>, u64>,
@@ -19,7 +18,7 @@ fn test_cmrdt() {
             let dot = crdts::Dot::new(actor, counter);
             let op1 = controller.txns.add(
                 format!("{actor}-{counter}"),
-                controller.txns.read().derive_add_ctx(actor.to_string()),
+                controller.txns.read_ctx().derive_add_ctx(actor.to_string()),
             );
 
             let add_ctx = controller.history_hashes.read_ctx().derive_add_ctx(actor);
@@ -29,7 +28,7 @@ fn test_cmrdt() {
 
             let op3 = controller.candidates.add(
                 vec![actor as u8; 20],
-                controller.candidates.read().derive_add_ctx(actor),
+                controller.candidates.read_ctx().derive_add_ctx(actor),
             );
 
             let op4 = controller.block_height.inc(actor);
@@ -58,7 +57,10 @@ fn test_cvrdt() {
     let dot = Dot::new(actor, counter);
     let op1 = controller1.txns.add(
         format!("{actor}-{counter}"),
-        controller1.txns.read().derive_add_ctx(actor.to_string()),
+        controller1
+            .txns
+            .read_ctx()
+            .derive_add_ctx(actor.to_string()),
     );
 
     let add_ctx = controller1.history_hashes.read_ctx().derive_add_ctx(actor);
@@ -68,7 +70,7 @@ fn test_cvrdt() {
 
     let op3 = controller1.candidates.add(
         vec![actor as u8; 20],
-        controller1.candidates.read().derive_add_ctx(actor),
+        controller1.candidates.read_ctx().derive_add_ctx(actor),
     );
 
     let op4 = controller1.block_height.inc(actor);
@@ -86,7 +88,10 @@ fn test_cvrdt() {
     let dot = Dot::new(actor, counter);
     let op1 = controller2.txns.add(
         format!("{actor}-{counter}"),
-        controller2.txns.read().derive_add_ctx(actor.to_string()),
+        controller2
+            .txns
+            .read_ctx()
+            .derive_add_ctx(actor.to_string()),
     );
 
     let add_ctx = controller2.history_hashes.read_ctx().derive_add_ctx(actor);
@@ -96,7 +101,7 @@ fn test_cvrdt() {
 
     let op3 = controller2.candidates.add(
         vec![actor as u8; 20],
-        controller2.candidates.read().derive_add_ctx(actor),
+        controller2.candidates.read_ctx().derive_add_ctx(actor),
     );
 
     let op4 = controller2.block_height.inc(actor);
