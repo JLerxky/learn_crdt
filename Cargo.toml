@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 crdts = "7.3"
 crdts_macro = "7.3"
+bincode = "1.3"
